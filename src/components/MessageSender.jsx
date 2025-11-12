@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import './MessageSender.css';
 
 const MessageSender = ({ isConnected, onMessageSent }) => {
@@ -10,10 +10,14 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
     hora: '',
   });
 
+  const [file, setFile] = useState(null);       // imagen seleccionada
+  const [preview, setPreview] = useState(null); // url de previsualización
+  const fileInputRef = useRef(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [preview, setPreview] = useState('');
+  const [messagePreview, setMessagePreview] = useState(''); // preview del mensaje de texto
 
   const apiBaseUrl = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:5111';
   const token = localStorage.getItem('token');
@@ -32,19 +36,19 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
       [name]: value
     }));
 
-    // Generar preview en tiempo real
+    // Generar preview del mensaje en tiempo real
     if (name === 'templateOption' || name === 'nombre' || name === 'fecha' || name === 'hora') {
-      generatePreview({
+      generateMessagePreview({
         ...formData,
         [name]: value
       });
     }
   };
 
-  // Generar preview del mensaje
-  const generatePreview = (data) => {
+  // Generar preview del mensaje de texto
+  const generateMessagePreview = (data) => {
     if (!data.templateOption || !data.nombre || !data.fecha || !data.hora) {
-      setPreview('');
+      setMessagePreview('');
       return;
     }
 
@@ -100,7 +104,19 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
 ¡Gracias por avisarnos!`
     };
 
-    setPreview(templates[data.templateOption] || '');
+    setMessagePreview(templates[data.templateOption] || '');
+  };
+
+  // Manejar cambio de archivo
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setPreview(URL.createObjectURL(selectedFile)); // genera la URL de preview
+    } else {
+      setFile(null);
+      setPreview(null);
+    }
   };
 
   // Validar formulario
@@ -142,13 +158,17 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
       return false;
     }
 
+    if (!file) {
+      setError('Debes seleccionar una imagen');
+      return false;
+    }
+
     return true;
   };
 
   // Enviar mensaje
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     
     if (!isConnected) {
       setError('Debes estar conectado a WhatsApp para enviar mensajes');
@@ -163,18 +183,26 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
     setError('');
     setSuccess('');
 
-    const formDataToSend = new FormData();
-    for (const key in formData) {
-      formDataToSend.append(key, formData[key]);
-    }
+    try {
+      // Usamos FormData para enviar texto + archivo
+      const bodyToSend = new FormData();
+      bodyToSend.append('telefono', formData.telefono);
+      bodyToSend.append('templateOption', formData.templateOption);
+      bodyToSend.append('nombre', formData.nombre);
+      bodyToSend.append('fecha', formData.fecha);
+      bodyToSend.append('hora', formData.hora);
 
-  try {
+      // Si hay archivo, lo añadimos
+      if (file) {
+        bodyToSend.append('image', file); // Cambia 'flyer' a 'image' si tu back-end lo espera así
+      }
+
       const response = await fetch(`${apiBaseUrl}/api/send-message-image`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}` // No poner content-type aquí
         },
-        body: formDataToSend
+        body: bodyToSend
       });
 
       const data = await response.json();
@@ -197,7 +225,12 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
         fecha: '',
         hora: '',
       });
-      setPreview('');
+      setFile(null);
+      setPreview(null);
+      setMessagePreview('');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''; // Limpiar input file
+      }
 
       if (onMessageSent) {
         onMessageSent(data);
@@ -208,51 +241,6 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
     } finally {
       setLoading(false);
     }
-
-
-
-    // try {
-    //   const response = await fetch(`${apiBaseUrl}/api/send-message`, {
-    //     method: 'POST',
-    //     headers: {
-    //       'Content-Type': 'application/json',
-    //       'Authorization': `Bearer ${token}`
-    //     },
-    //     body: JSON.stringify(formData)
-    //   });
-
-    //   const data = await response.json();
-
-    //   if (!response.ok) {
-    //     if (data.errors) {
-    //       const errorMessages = data.errors.map(err => `${err.field}: ${err.message}`).join(', ');
-    //       throw new Error(errorMessages);
-    //     }
-    //     throw new Error(data.message || 'Error al enviar mensaje');
-    //   }
-
-    //   setSuccess(`Mensaje enviado exitosamente a ${formData.telefono}`);
-      
-    //   // Limpiar formulario
-    //   setFormData({
-    //     telefono: '',
-    //     templateOption: 'cita_gratis',
-    //     nombre: '',
-    //     fecha: '',
-    //     hora: '',
-    //   });
-    //   setPreview('');
-
-    //   // Notificar al componente padre
-    //   if (onMessageSent) {
-    //     onMessageSent(data);
-    //   }
-
-    // } catch (error) {
-    //   setError(error.message);
-    // } finally {
-    //   setLoading(false);
-    // }
   };
 
   // Limpiar mensajes
@@ -263,7 +251,7 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
 
   return (
     <div className="message-sender">
-      <h2>📱 Enviar Mensaje WhatsApp</h2>
+      <h2>📱 Enviar Mensaje WhatsApp con Imagen</h2>
       
       {!isConnected && (
         <div className="warning-message">
@@ -301,22 +289,6 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
           <small>Formato: +34 123 456 789 o 123456789</small>
         </div>
 
-        {/* <div className="form-group">
-          <label htmlFor="templateOption">📝Tipo Servicio *</label>
-          <select
-            id="templateOption"
-            name="templateOption"
-            value={formData.templateOption}
-            onChange={handleInputChange}
-            disabled={loading || !isConnected}
-            required
-          >
-            <option value="cita_gratis">Diseño y Desarrollo Web</option>
-            <option value="cita_pagada">Gestion de Redes Sociales</option>
-            <option value="recordatorio_cita">Marketing y Gestion Digital</option>
-            <option value="confirmacion_asistencia">Branding y Diseño</option>
-          </select>
-        </div> */}
         <div className="form-group">
           <label htmlFor="templateOption">📝Tipo de mensaje *</label>
           <select
@@ -333,6 +305,7 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
             <option value="confirmacion_asistencia">Confirmacion asistencia</option>
           </select>
         </div>
+
         <div className="form-group">
           <label htmlFor="nombre">👨‍⚕️ Nombre del Cliente *</label>
           <input
@@ -346,19 +319,62 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
             required
           />
         </div>
+
         <div className="form-group">
-          <label htmlFor="image">🖼 Subir Imagen</label>
+          <label htmlFor="image">🖼️ Subir Imagen *</label>
           <input
             type="file"
             id="image"
             name="image"
             accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files[0];
-              setFormData({ ...formData, image: file });
-            }}
+            onChange={handleFileChange}
             disabled={loading || !isConnected}
+            ref={fileInputRef}
+            required={!preview} // Solo requerido si no hay preview
           />
+
+          {/* Preview con botón X */}
+          {preview && (
+            <div className="image-preview" style={{ position: 'relative', display: 'inline-block' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setFile(null);
+                  setPreview(null);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = ''; // Limpiar input file
+                  }
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '5px',
+                  right: '5px',
+                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '24px',
+                  height: '24px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  lineHeight: '22px',
+                  textAlign: 'center'
+                }}
+              >
+                ✖
+              </button>
+              <img
+                src={preview}
+                alt="Vista previa de la imagen"
+                style={{
+                  maxWidth: '250px',
+                  margin: '10px auto',
+                  borderRadius: '8px',
+                  display: 'block',
+                }}
+              />
+            </div>
+          )}
         </div>
 
         <div className="form-row">
@@ -399,15 +415,15 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
         </button>
       </form>
 
-      {preview && (
+      {messagePreview && (
         <div className="message-preview">
           <h3>👀 Vista Previa del Mensaje</h3>
           <div className="preview-content">
-            <pre>{preview}</pre>
+            <pre>{messagePreview}</pre>
           </div>
           <div className="preview-info">
             <span>📱 Destinatario: {formData.telefono || 'No especificado'}</span>
-            <span>📊 Caracteres: {preview.length}</span>
+            <span>📊 Caracteres: {messagePreview.length}</span>
           </div>
         </div>
       )}
