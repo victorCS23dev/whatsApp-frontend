@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import './MessageSender.css';
+import 'react-phone-input-2/lib/style.css';
+import PhoneInput from 'react-phone-input-2';
 
 const MessageSender = ({ isConnected, onMessageSent }) => {
   const [formData, setFormData] = useState({
@@ -276,17 +278,25 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
       <form onSubmit={handleSubmit} className="message-form">
         <div className="form-group">
           <label htmlFor="telefono">📞 Número de Teléfono *</label>
-          <input
-            type="tel"
-            id="telefono"
-            name="telefono"
+
+          <PhoneInput
+            country={'pe'}
             value={formData.telefono}
-            onChange={handleInputChange}
-            placeholder="Ej: +34 123 456 789"
-            disabled={loading || !isConnected}
-            required
+            onChange={(value) =>
+              setFormData({ ...formData, telefono: value })
+            }
+            inputProps={{
+              name: 'telefono',
+              required: true,
+              disabled: loading || !isConnected,
+            }}
+            enableSearch={true}
+            containerClass="phone-input-container"
+            inputClass="phone-input"
+            buttonClass="phone-flag"
           />
-          <small>Formato: +34 123 456 789 o 123456789</small>
+
+          <small>Selecciona país y escribe solo números</small>
         </div>
 
         <div className="form-group">
