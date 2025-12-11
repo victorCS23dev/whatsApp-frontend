@@ -5,7 +5,7 @@
 ## 📋 Tabla de Contenidos
 
 - [🚀 Inicio Rápido](#-inicio-rápido)
-- [⚙️ Configuración Inicial](#-configuración-inicial)
+- [⚙️ Configuración Inicial](#️-configuración-inicial)
 - [📦 Scripts Disponibles](#-scripts-disponibles)
 - [📁 Estructura del Proyecto](#-estructura-del-proyecto)
 - [🔧 Tecnologías](#-tecnologías)
@@ -32,14 +32,11 @@ npm run dev
 
 ## ⚙️ Configuración Inicial
 ```bash
-# Verificar instalación
-node --version
-npm --version
-
-
-Si no tienes Node.js, descárgalo desde:
-https://nodejs.org/
+# Verificar instalación de Node.js y npm
+node --version     # Muestra la versión de Node.js instalada
+npm --version      # Muestra la versión de npm instalada
 ```
+**Si no tienes Node.js, descárgalo desde: [https://nodejs.org/¨]**
 ## 📦 Scripts Disponibles
 ```bash
 # Inicia el proyecto en modo desarrollo
@@ -107,16 +104,16 @@ Opción 2: Rebase (commits más limpios)
 git checkout tu-rama
 git rebase develop
 ```
-📌 Traer cambios de otras ramas
 ```bash
+📌 Traer cambios de otras ramas
 # Cherry-pick de un commit específico
 git cherry-pick abc1234
 
 # Merge de otra rama
 git merge origin/otra-rama
 ```
-🌐 Sincronizar con main (producción)
 ```bash
+🌐 Sincronizar con main (producción)
 git checkout main
 git pull origin main
 git checkout tu-rama
