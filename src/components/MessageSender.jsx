@@ -6,10 +6,8 @@ import PhoneInput from 'react-phone-input-2';
 const MessageSender = ({ isConnected, onMessageSent }) => {
   const [formData, setFormData] = useState({
     telefono: '',
-    templateOption: 'cita_gratis',
+    templateOption: '1',
     nombre: '',
-    fecha: '',
-    hora: '',
   });
 
   const [file, setFile] = useState(null);       // imagen seleccionada
@@ -24,92 +22,73 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
   const apiBaseUrl = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:5111';
   const token = localStorage.getItem('token');
 
-  // Obtener fecha mínima (hoy)
-  const getMinDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  };
-
   // Manejar cambios en el formulario
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
 
-    // Generar preview del mensaje en tiempo real
-    if (name === 'templateOption' || name === 'nombre' || name === 'fecha' || name === 'hora') {
-      generateMessagePreview({
-        ...formData,
-        [name]: value
-      });
-    }
-  };
-
-  // Generar preview del mensaje de texto
-  const generateMessagePreview = (data) => {
-    if (!data.templateOption || !data.nombre || !data.fecha || !data.hora) {
-      setMessagePreview('');
-      return;
-    }
-
-    const templates = {
-      cita_gratis: `¡Hola 👋
-
-✅ Tu primera cita GRATUITA ha sido confirmada:
-
-📅 Fecha: ${data.fecha}
-🕐 Hora: ${data.hora}
-👨‍⚕️ Psicólogo: ${data.nombre}
-
-🎉 ¡Recuerda que tu primera consulta es completamente GRATIS!
-
-Si tienes alguna consulta, no dudes en contactarnos.
-
-¡Te esperamos! 🌟`,
-
-      cita_pagada: `¡Hola 👋
-
-✅ Tu cita ha sido confirmada:
-
-📅 Fecha: ${data.fecha}
-🕐 Hora: ${data.hora}
-👨‍⚕️ Psicólogo: ${data.nombre}
-
-Por favor, realiza el pago antes de la consulta para confirmar tu reserva.
-
-Si tienes dudas, contáctanos.
-
-¡Gracias por confiar en nosotros!`,
-
-      recordatorio_cita: `¡Hola 👋
-
-⏰ Te recordamos tu cita próxima:
-
-📅 Fecha: ${data.fecha}
-🕐 Hora: ${data.hora}
-👨‍⚕️ Psicólogo: ${data.nombre}
-
-Por favor, confirma tu asistencia respondiendo a este mensaje.
-
-¡Nos vemos pronto!`,
-
-      confirmacion_asistencia: `¡Hola 👋
-
-✅ Hemos recibido tu confirmación de asistencia para la cita:
-
-📅 Fecha: ${data.fecha}
-🕐 Hora: ${data.hora}
-👨‍⚕️ Psicólogo: ${data.nombre}
-
-¡Gracias por avisarnos!`
+    const updatedData = {
+      ...formData,
+      [name]: value,
     };
 
-    setMessagePreview(templates[data.templateOption] || '');
+    setFormData(updatedData);
+
+    if (name === 'nombre' || name === 'templateOption') {
+      generateMessagePreview(
+        updatedData.templateOption,
+        updatedData.nombre
+      );
+    }
   };
 
-  // Manejar cambio de archivo
+
+  // Generar preview del mensaje de texto
+  const generateMessagePreview = (option, nombre) => {
+  if (!option || !nombre) {
+    setMessagePreview('');
+    return;
+  }
+
+  const templates = {
+    '1': `¡Hola ${nombre}!👋
+Gracias por contactarnos. Soy un encargado de DIGIMEDIA 🚀
+
+¿Sabías que el 75% de usuarios juzga la credibilidad de tu negocio por tu sitio web?
+✅ Sin una web profesional, pierdes clientes antes de que te conozcan
+✅ Un diseño optimizado convierte visitas en ventas reales 💰
+
+💬 Cuéntame: ¿Cual es tu negocio?¿ya tienes web o necesitas crear una desde cero? 👇`,
+
+    '2': `¡Hola ${nombre}!👋
+Gracias por contactarnos. Soy un encargado de DIGIMEDIA 🚀
+
+¿Sabías que el 73% de las empresas que gestionan bien sus redes duplican sus ventas en menos de 6 meses ?💰
+⚠️Tu competencia podría estar captando a TU próximo cliente ahora mismo 
+
+💬 Cuéntame: ¿cuál es tu negocio y cuál es tu mayor desafío con tus redes ahora mismo? 👇`,
+
+    '3': `¡Hola ${nombre}!👋
+Gracias por contactarnos. Soy un encargado de DIGIMEDIA 🚀
+
+¿Sabías que el 68% de empresas invierte en digital pero solo el 22% ve resultados reales? 📊
+La diferencia está en la ESTRATEGIA, no solo en estar presente 🎯
+
+💬Cuéntame, ¿Cual es tu negocio y cómo están funcionando tus campañas digitales? 👇`,
+
+    '4': `Hola ${nombre}👋
+Gracias por contactarnos. Soy un encargado de DIGIMEDIA 🚀
+
+¿Sabías que el 77% de consumidores compra por marcas que reconoce visualmente?🎨✨
+⚠️ Si tu marca no te representa, pierdes CONEXIÓN Y VENTAS 📉
+🔥 Tu identidad visual es tu carta de presentación. Cuando funciona, vende sola
+
+💬 Cuéntame: ¿Cual es tu negocio?¿quieres crear tu branding desde cero o renovarlo? 👇`,
+  };
+
+  setMessagePreview(templates[option] || '');
+};
+
+
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
@@ -129,39 +108,14 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
     }
 
     if (!formData.nombre.trim()) {
-      setError('El nombre del psicólogo es requerido');
-      return false;
-    }
-
-    if (!formData.fecha) {
-      setError('La fecha es requerida');
-      return false;
-    }
-
-    if (!formData.hora) {
-      setError('La hora es requerida');
+      setError('El nombre del cliente es requerido');
       return false;
     }
 
     // Validar formato de teléfono
-    const cleantelefono = formData.telefono.replace(/\D/g, '');
-    if (cleantelefono.length < 10 || cleantelefono.length > 15) {
+    const cleanPhone = formData.telefono.replace(/\D/g, '');
+    if (cleanPhone.length < 10 || cleanPhone.length > 15) {
       setError('El número de teléfono debe tener entre 10 y 15 dígitos');
-      return false;
-    }
-
-    // Validar que la fecha no sea pasada
-    const selectedDate = new Date(formData.fecha);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    if (selectedDate < today) {
-      setError('La fecha no puede ser en el pasado');
-      return false;
-    }
-
-    if (!file) {
-      setError('Debes seleccionar una imagen');
       return false;
     }
 
@@ -171,15 +125,13 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
   // Enviar mensaje
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!isConnected) {
       setError('Debes estar conectado a WhatsApp para enviar mensajes');
       return;
     }
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
     setError('');
@@ -191,12 +143,10 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
       bodyToSend.append('telefono', formData.telefono);
       bodyToSend.append('templateOption', formData.templateOption);
       bodyToSend.append('nombre', formData.nombre);
-      bodyToSend.append('fecha', formData.fecha);
-      bodyToSend.append('hora', formData.hora);
 
       // Si hay archivo, lo añadimos
       if (file) {
-        bodyToSend.append('image', file); // Cambia 'flyer' a 'image' si tu back-end lo espera así
+        bodyToSend.append('image', file);
       }
 
       const response = await fetch(`${apiBaseUrl}/api/send-message-image`, {
@@ -222,11 +172,10 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
       // Limpiar formulario
       setFormData({
         telefono: '',
-        templateOption: 'cita_gratis',
+        templateOption: '1',
         nombre: '',
-        fecha: '',
-        hora: '',
       });
+
       setFile(null);
       setPreview(null);
       setMessagePreview('');
@@ -234,9 +183,7 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
         fileInputRef.current.value = ''; // Limpiar input file
       }
 
-      if (onMessageSent) {
-        onMessageSent(data);
-      }
+      onMessageSent?.(data);
 
     } catch (error) {
       setError(error.message);
@@ -253,8 +200,8 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
 
   return (
     <div className="message-sender">
-      <h2>📱 Enviar Mensaje WhatsApp con Imagen</h2>
-      
+      <h2>📱 Enviar Mensaje WhatsApp</h2>
+
       {!isConnected && (
         <div className="warning-message">
           ⚠️ Debes estar conectado a WhatsApp para enviar mensajes
@@ -309,10 +256,10 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
             disabled={loading || !isConnected}
             required
           >
-            <option value="cita_gratis">Cita gratis</option>
-            <option value="cita_pagada">Cita pagada</option>
-            <option value="recordatorio_cita">Recordatorio cita</option>
-            <option value="confirmacion_asistencia">Confirmacion asistencia</option>
+            <option value="1">DISEÑO Y DESARROLLO WEB</option>
+            <option value="2">GESTIÓN DE REDES SOCIALES</option>
+            <option value="3">MARKETING Y GESTIÓN DIGITAL</option>
+            <option value="4">BRANDING Y DISEÑO</option>
           </select>
         </div>
 
@@ -324,7 +271,7 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
             name="nombre"
             value={formData.nombre}
             onChange={handleInputChange}
-            placeholder="Nombre completo del psicólogo"
+            placeholder="Nombre completo del Cliente"
             disabled={loading || !isConnected}
             required
           />
@@ -340,7 +287,6 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
             onChange={handleFileChange}
             disabled={loading || !isConnected}
             ref={fileInputRef}
-            required={!preview} // Solo requerido si no hay preview
           />
 
           {/* Preview con botón X */}
@@ -385,35 +331,6 @@ Por favor, confirma tu asistencia respondiendo a este mensaje.
               />
             </div>
           )}
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="fecha">📅 Fecha *</label>
-            <input
-              type="date"
-              id="fecha"
-              name="fecha"
-              value={formData.fecha}
-              onChange={handleInputChange}
-              min={getMinDate()}
-              disabled={loading || !isConnected}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="hora">🕐 Hora *</label>
-            <input
-              type="time"
-              id="hora"
-              name="hora"
-              value={formData.hora}
-              onChange={handleInputChange}
-              disabled={loading || !isConnected}
-              required
-            />
-          </div>
         </div>
 
         <button
