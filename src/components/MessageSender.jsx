@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import './MessageSender.css';
 import 'react-phone-input-2/lib/style.css';
 import PhoneInput from 'react-phone-input-2';
@@ -6,7 +6,7 @@ import PhoneInput from 'react-phone-input-2';
 const MessageSender = ({ isConnected, onMessageSent }) => {
   const [formData, setFormData] = useState({
     telefono: '',
-    templateOption: '1',
+    templateOption: '',
     nombre: '',
   });
 
@@ -19,8 +19,31 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
   const [success, setSuccess] = useState('');
   const [messagePreview, setMessagePreview] = useState(''); // preview del mensaje de texto
 
+  const [templates, setTemplates] = useState([]);
+
   const apiBaseUrl = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:5111';
   const token = localStorage.getItem('token');
+
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/templates`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) throw new Error('Error al cargar plantillas');
+        const data = await response.json();
+        setTemplates(data);
+        if (data.length > 0) {
+          setFormData(prev => ({ ...prev, templateOption: data[0].id }));
+        }
+      } catch (err) {
+        setError('No se pudieron cargar las plantillas: ' + err.message);
+      }
+    };
+    fetchTemplates();
+  }, [apiBaseUrl, token]);
 
   // Manejar cambios en el formulario
   const handleInputChange = (e) => {
@@ -44,49 +67,19 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
 
   // Generar preview del mensaje de texto
   const generateMessagePreview = (option, nombre) => {
-  if (!option || !nombre) {
-    setMessagePreview('');
-    return;
-  }
+    if (!option || !nombre) {
+      setMessagePreview('');
+      return;
+    }
 
-  const templates = {
-    '1': `¡Hola ${nombre}!👋
-Gracias por contactarnos. Soy un encargado de DIGIMEDIA 🚀
-
-¿Sabías que el 75% de usuarios juzga la credibilidad de tu negocio por tu sitio web?
-✅ Sin una web profesional, pierdes clientes antes de que te conozcan
-✅ Un diseño optimizado convierte visitas en ventas reales 💰
-
-💬 Cuéntame: ¿Cual es tu negocio?¿ya tienes web o necesitas crear una desde cero? 👇`,
-
-    '2': `¡Hola ${nombre}!👋
-Gracias por contactarnos. Soy un encargado de DIGIMEDIA 🚀
-
-¿Sabías que el 73% de las empresas que gestionan bien sus redes duplican sus ventas en menos de 6 meses ?💰
-⚠️Tu competencia podría estar captando a TU próximo cliente ahora mismo 
-
-💬 Cuéntame: ¿cuál es tu negocio y cuál es tu mayor desafío con tus redes ahora mismo? 👇`,
-
-    '3': `¡Hola ${nombre}!👋
-Gracias por contactarnos. Soy un encargado de DIGIMEDIA 🚀
-
-¿Sabías que el 68% de empresas invierte en digital pero solo el 22% ve resultados reales? 📊
-La diferencia está en la ESTRATEGIA, no solo en estar presente 🎯
-
-💬Cuéntame, ¿Cual es tu negocio y cómo están funcionando tus campañas digitales? 👇`,
-
-    '4': `Hola ${nombre}👋
-Gracias por contactarnos. Soy un encargado de DIGIMEDIA 🚀
-
-¿Sabías que el 77% de consumidores compra por marcas que reconoce visualmente?🎨✨
-⚠️ Si tu marca no te representa, pierdes CONEXIÓN Y VENTAS 📉
-🔥 Tu identidad visual es tu carta de presentación. Cuando funciona, vende sola
-
-💬 Cuéntame: ¿Cual es tu negocio?¿quieres crear tu branding desde cero o renovarlo? 👇`,
+    const template = templates.find(t => t.id === option);
+    if (template) {
+      const text = template.text.replace('{nombre}', nombre);
+      setMessagePreview(text);
+    } else {
+      setMessagePreview('');
+    }
   };
-
-  setMessagePreview(templates[option] || '');
-};
 
 
   const handleFileChange = (e) => {
@@ -172,7 +165,7 @@ Gracias por contactarnos. Soy un encargado de DIGIMEDIA 🚀
       // Limpiar formulario
       setFormData({
         telefono: '',
-        templateOption: '1',
+        templateOption: templates.length > 0 ? templates[0].id : '',
         nombre: '',
       });
 
@@ -256,11 +249,13 @@ Gracias por contactarnos. Soy un encargado de DIGIMEDIA 🚀
             disabled={loading || !isConnected}
             required
           >
-            <option value="1">DISEÑO Y DESARROLLO WEB</option>
-            <option value="2">GESTIÓN DE REDES SOCIALES</option>
-            <option value="3">MARKETING Y GESTIÓN DIGITAL</option>
-            <option value="4">BRANDING Y DISEÑO</option>
+            {templates.map(template => (
+              <option key={template.id} value={template.id}>
+                {template.name}
+              </option>
+            ))}
           </select>
+          {templates.length === 0 && <small>Cargando plantillas...</small>}
         </div>
 
         <div className="form-group">
