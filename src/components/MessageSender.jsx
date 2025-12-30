@@ -6,7 +6,7 @@ import PhoneInput from 'react-phone-input-2';
 const MessageSender = ({ isConnected, onMessageSent }) => {
   const [formData, setFormData] = useState({
     telefono: '',
-    templateOption: '',
+    id_service: '',
     nombre: '',
   });
 
@@ -36,7 +36,7 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
         const data = await response.json();
         setTemplates(data);
         if (data.length > 0) {
-          setFormData(prev => ({ ...prev, templateOption: data[0].id }));
+          setFormData(prev => ({ ...prev, id_service: data[0].id }));
         }
       } catch (err) {
         setError('No se pudieron cargar las plantillas: ' + err.message);
@@ -56,9 +56,9 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
 
     setFormData(updatedData);
 
-    if (name === 'nombre' || name === 'templateOption') {
+    if (name === 'nombre' || name === 'id_service') {
       generateMessagePreview(
-        updatedData.templateOption,
+        updatedData.id_service,
         updatedData.nombre
       );
     }
@@ -67,19 +67,31 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
 
   // Generar preview del mensaje de texto
   const generateMessagePreview = (option, nombre) => {
-    if (!option || !nombre) {
+    if (!option || !nombre || templates.length === 0) {
       setMessagePreview('');
       return;
     }
 
-    const template = templates.find(t => t.id === option);
-    if (template) {
-      const text = template.text.replace('{nombre}', nombre);
-      setMessagePreview(text);
-    } else {
+    const template = templates.find(t => t.id === Number(option));
+    if (!template || !template.messages) {
       setMessagePreview('');
+      return;
     }
+
+    // Siempre tomar el primer mensaje
+    const firstKey = Object.keys(template.messages)[0];
+    const firstMessage = template.messages[firstKey];
+
+    if (!firstMessage?.text) {
+      setMessagePreview('');
+      return;
+    }
+
+    setMessagePreview(
+      firstMessage.text.replace('{nombre}', nombre)
+    );
   };
+
 
 
   const handleFileChange = (e) => {
@@ -134,7 +146,7 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
       // Usamos FormData para enviar texto + archivo
       const bodyToSend = new FormData();
       bodyToSend.append('telefono', formData.telefono);
-      bodyToSend.append('templateOption', formData.templateOption);
+      bodyToSend.append('id_service', formData.id_service);
       bodyToSend.append('nombre', formData.nombre);
 
       // Si hay archivo, lo añadimos
@@ -165,7 +177,7 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
       // Limpiar formulario
       setFormData({
         telefono: '',
-        templateOption: templates.length > 0 ? templates[0].id : '',
+        id_service: templates.length > 0 ? templates[0].id : '',
         nombre: '',
       });
 
@@ -240,11 +252,11 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
         </div>
 
         <div className="form-group">
-          <label htmlFor="templateOption">📝Tipo de mensaje *</label>
+          <label htmlFor="id_service">📝Tipo de mensaje *</label>
           <select
-            id="templateOption"
-            name="templateOption"
-            value={formData.templateOption}
+            id="id_service"
+            name="id_service"
+            value={formData.id_service}
             onChange={handleInputChange}
             disabled={loading || !isConnected}
             required
