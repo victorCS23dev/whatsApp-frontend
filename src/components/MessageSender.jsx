@@ -67,19 +67,31 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
 
   // Generar preview del mensaje de texto
   const generateMessagePreview = (option, nombre) => {
-    if (!option || !nombre) {
+    if (!option || !nombre || templates.length === 0) {
       setMessagePreview('');
       return;
     }
 
-    const template = templates.find(t => t.id === option);
-    if (template) {
-      const text = template.text.replace('{nombre}', nombre);
-      setMessagePreview(text);
-    } else {
+    const template = templates.find(t => t.id === Number(option));
+    if (!template || !template.messages) {
       setMessagePreview('');
+      return;
     }
+
+    // Siempre tomar el primer mensaje
+    const firstKey = Object.keys(template.messages)[0];
+    const firstMessage = template.messages[firstKey];
+
+    if (!firstMessage?.text) {
+      setMessagePreview('');
+      return;
+    }
+
+    setMessagePreview(
+      firstMessage.text.replace('{nombre}', nombre)
+    );
   };
+
 
 
   const handleFileChange = (e) => {
