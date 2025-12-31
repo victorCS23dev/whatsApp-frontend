@@ -176,7 +176,7 @@ const MessageSender = ({ isConnected, onMessageSent }) => {
       
       // Limpiar formulario
       setFormData({
-        telefono: '',
+        telefono: '51',
         id_service: templates.length > 0 ? templates[0].id : '',
         nombre: '',
       });
