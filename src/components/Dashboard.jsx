@@ -208,6 +208,32 @@ const Dashboard = ({ user, onLogout }) => {
   const handleStatusUpdate = useCallback((data) => {
     console.log("📊 Actualizando estado:", data);
 
+    // DETECTAR CIERRE DE SESIÓN DESDE WHATSAPP
+    if (data.isLoggedOut) {
+      console.warn("Usuario cerró sesión desde WhatsApp!");
+      
+      // Limpiar estado local
+      setQrData(null);
+      stopCountdown();
+      setTimeRemaining(0);
+      
+      // Mostrar notificación importante
+      addNotification(
+        "Sesión cerrada desde WhatsApp. Por favor, escanea el QR nuevamente.",
+        "error"
+      );
+      
+      // Actualizar estado de conexión
+      setConnectionStatus({
+        hasActiveQR: false,
+        isConnected: false,
+        qrInfo: null,
+        connectionState: { status: 'logged_out' },
+      });
+      
+      return;
+    }
+
     setConnectionStatus((prev) => ({
       ...prev,
       hasActiveQR: data.hasActiveQR || false,
