@@ -19,6 +19,7 @@ const Dashboard = ({ user, onLogout }) => {
   const [notifications, setNotifications] = useState([]);
   const [qrString, setQrString] = useState("");
   const [sentMessages, setSentMessages] = useState([]);
+  const [qrRegenerationPending, setQrRegenerationPending] = useState(false);
 
   // Referencias
   const countdownRef = useRef(null);
@@ -242,6 +243,10 @@ const Dashboard = ({ user, onLogout }) => {
       connectionState: data.connectionState || {},
     }));
 
+    if (data.isConnected || data.hasActiveQR || data.qrData?.image) {
+      setQrRegenerationPending(false);
+    }
+
     setTokenExpired(false);
     setError("");
 
@@ -302,7 +307,11 @@ const Dashboard = ({ user, onLogout }) => {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.message || "Error en la solicitud");
+          const error = new Error(data.message || "Error en la solicitud");
+          if (data?.code) {
+            error.code = data.code;
+          }
+          throw error;
         }
 
         return data;
@@ -355,7 +364,15 @@ const Dashboard = ({ user, onLogout }) => {
         );
       }
     } catch (error) {
-      addNotification(`Error al solicitar QR: ${error.message}`, "error");
+      if (error.code === "CONNECTION_IN_PROGRESS") {
+        setQrRegenerationPending(true);
+        addNotification(
+          "Se está generando un nuevo QR automáticamente. Espera unos segundos sin presionar nuevamente.",
+          "info",
+        );
+      } else {
+        addNotification(`Error al solicitar QR: ${error.message}`, "error");
+      }
     }
   }, [apiCall, handleStatusUpdate]);
 
@@ -363,7 +380,14 @@ const Dashboard = ({ user, onLogout }) => {
   const expireQR = useCallback(async () => {
     try {
       await apiCall("/api/qr-expire", { method: "POST" });
-      addNotification("QR expirado manualmente", "success");
+      addNotification(
+        "QR expirado manualmente. Espera mientras se genera uno nuevo automáticamente.",
+        "success",
+      );
+      setQrRegenerationPending(true);
+      setQrData(null);
+      stopCountdown();
+      setTimeRemaining(0);
     } catch (error) {
       addNotification(`Error al expirar QR: ${error.message}`, "error");
     }
@@ -555,6 +579,19 @@ const Dashboard = ({ user, onLogout }) => {
       );
     }
 
+    if (qrRegenerationPending) {
+      return (
+        <div className="status-card info">
+          <h3>Generando nuevo QR</h3>
+          <p>
+            El QR anterior se expiró manualmente. Espera unos segundos, el
+            sistema generará otro automáticamente.
+          </p>
+          <div className="spinner"></div>
+        </div>
+      );
+    }
+
     return (
       <div className="status-card disconnected">
         <h3>❌ WhatsApp Desconectado</h3>
@@ -613,11 +650,11 @@ const Dashboard = ({ user, onLogout }) => {
                   <li>Escanea el código QR mostrado</li>
                 </ol>
               </div>
-  <div className="problem-qr">
+  {/* <div className="problem-qr">
     <p className="´">Si hay problemas presione: </p>
     <button onClick={handleResetAuth} className="btn btn-secondary">
       Eliminar QR
-    </button></div>
+    </button></div> */}
 
               <div className="qr-content">{renderContent()}</div>
             </section>
